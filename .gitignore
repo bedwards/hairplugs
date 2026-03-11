@@ -1,0 +1,21 @@
+# Secrets
+*.license
+*.serial
+*.key
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large binary files
+*.wav
+*.mp3
+*.aif
+*.aiff
+*.flac
