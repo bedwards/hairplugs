@@ -431,14 +431,32 @@ def cmd_tweak(args):
         print(f"  {k} = {v}")
 
 
+# Sugar Bytes plugins use proprietary preset formats (.scg/.sbc/.sbs) in
+# ~/Documents/Sugar Bytes/<plugin>/, not the standard VST3 preset path.
+SUGAR_BYTES_PLUGINS = frozenset({
+    'Aparillo', 'Artillery2', 'Consequence', 'Cyclop', 'DrumComputer',
+    'Effectrix', 'Egoist', 'Factory', 'Guitarist', 'Looperator',
+    'Obscurium', 'Thesys', 'Turnado', 'Unique', 'WOW2',
+})
+
+
 def cmd_export(args):
     """Export preset(s) to ~/Library/Audio/Presets/ for plugin browser."""
     vst3_path = resolve_plugin(args.plugin)
     pdir = preset_dir(vst3_path)
     plist = read_plist(vst3_path)
 
-    vendor_dir_name = export_vendor_dir(plist)
     plugin_name = vst3_path.stem
+    if plugin_name in SUGAR_BYTES_PLUGINS:
+        print(f"Error: {plugin_name} uses Sugar Bytes' own preset format, "
+              f"not standard VST3 presets.", file=sys.stderr)
+        print(f"  Presets are at: ~/Documents/Sugar Bytes/{plugin_name}/",
+              file=sys.stderr)
+        print(f"  Use 'plugctl load {plugin_name} <name>' to restore via pedalboard instead.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    vendor_dir_name = export_vendor_dir(plist)
     export_dir = VST3_PRESETS_DIR / vendor_dir_name / plugin_name
 
     if args.all:

@@ -66,6 +66,8 @@ plugctl export <plugin> <name|-a|--all>   # Export to plugin preset browser
 - Plugin names are short (`WOW2`, `Thesys`), resolved case-insensitively
 - Presets stored as `.json` (version-controlled params) + `.blob` (gitignored binary state)
 - Export copies blob to `~/Library/Audio/Presets/<Vendor>/<Plugin>/` for plugin's own preset browser
+- Export does NOT work for Sugar Bytes plugins — they use proprietary formats (.scg/.sbc/.sbs) in `~/Documents/Sugar Bytes/<plugin>/`
+- Sugar Bytes presets are useful as plugctl snapshots only (`plugctl load`)
 - DrumComputer crashes in pedalboard — use in DAW only
 
 ## File Locations
