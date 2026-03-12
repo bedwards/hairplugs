@@ -8,6 +8,7 @@ Usage:
     plugctl init <plugin>                     # Save default state as _init
     plugctl snap <plugin> <name> [-m "msg"]   # Save current state
     plugctl load <plugin> <name>              # Restore state from preset
+    plugctl apply <plugin> <name>             # Load preset + open GUI to save natively
     plugctl diff <plugin> <a> <b>             # Compare two presets
     plugctl tweak <plugin> <src> <dst> p=v .. # Fork + modify params
     plugctl export <plugin> <name|-a|--all>   # Export to plugin preset browser
@@ -348,6 +349,29 @@ def cmd_load(args):
         print(f"  All parameters match saved values")
 
 
+def cmd_apply(args):
+    """Load preset and open plugin GUI so you can save via plugin's own browser."""
+    from pedalboard import load_plugin
+
+    vst3_path = resolve_plugin(args.plugin)
+    pdir = preset_dir(vst3_path)
+    blob_path = pdir / f"{args.name}.blob"
+
+    if not blob_path.exists():
+        print(f"Preset not found: {args.name}", file=sys.stderr)
+        sys.exit(1)
+
+    plugin = load_plugin(str(vst3_path))
+
+    with open(blob_path, 'rb') as f:
+        plugin.preset_data = f.read()
+
+    print(f"Loaded {args.name} into {vst3_path.stem}")
+    print(f"GUI opening — save the preset from the plugin's own browser, then close the window.")
+    plugin.show_editor()
+    print("Window closed.")
+
+
 def cmd_diff(args):
     """Compare two presets (param-level)."""
     vst3_path = resolve_plugin(args.plugin)
@@ -452,7 +476,7 @@ def cmd_export(args):
               f"not standard VST3 presets.", file=sys.stderr)
         print(f"  Presets are at: ~/Documents/Sugar Bytes/{plugin_name}/",
               file=sys.stderr)
-        print(f"  Use 'plugctl load {plugin_name} <name>' to restore via pedalboard instead.",
+        print(f"  Use 'plugctl apply {plugin_name} <name>' to load preset + open GUI to save natively.",
               file=sys.stderr)
         sys.exit(1)
 
@@ -810,6 +834,10 @@ def main():
     p.add_argument('plugin')
     p.add_argument('name')
 
+    p = sub.add_parser('apply', help='Load preset + open GUI to save natively')
+    p.add_argument('plugin')
+    p.add_argument('name')
+
     p = sub.add_parser('diff', help='Compare two presets')
     p.add_argument('plugin')
     p.add_argument('a')
@@ -837,6 +865,7 @@ def main():
         'init': cmd_init,
         'snap': cmd_snap,
         'load': cmd_load,
+        'apply': cmd_apply,
         'diff': cmd_diff,
         'tweak': cmd_tweak,
         'export': cmd_export,

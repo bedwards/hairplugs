@@ -58,6 +58,7 @@ plugctl scan <plugin> [-j|--json]         # Show params + values
 plugctl init <plugin>                     # Save default state as _init
 plugctl snap <plugin> <name> [-m "msg"]   # Save current state
 plugctl load <plugin> <name>              # Restore state from preset
+plugctl apply <plugin> <name>             # Load preset + open GUI to save natively
 plugctl diff <plugin> <a> <b>             # Compare two presets
 plugctl tweak <plugin> <src> <dst> p=v .. # Fork + modify params
 plugctl export <plugin> <name|-a|--all>   # Export to plugin preset browser
@@ -65,9 +66,9 @@ plugctl export <plugin> <name|-a|--all>   # Export to plugin preset browser
 - Installed at `~/.local/bin/plugctl` (symlink to `scripts/plugctl.py`)
 - Plugin names are short (`WOW2`, `Thesys`), resolved case-insensitively
 - Presets stored as `.json` (version-controlled params) + `.blob` (gitignored binary state)
-- Export copies blob to `~/Library/Audio/Presets/<Vendor>/<Plugin>/` for plugin's own preset browser
-- Export does NOT work for Sugar Bytes plugins — they use proprietary formats (.scg/.sbc/.sbs) in `~/Documents/Sugar Bytes/<plugin>/`
-- Sugar Bytes presets are useful as plugctl snapshots only (`plugctl load`)
+- `export` copies blob to `~/Library/Audio/Presets/<Vendor>/<Plugin>/` — works for standard VST3 plugins
+- `export` does NOT work for Sugar Bytes — use `apply` instead (opens GUI so you can save natively)
+- `apply` loads preset into plugin + opens native GUI window — use plugin's own Save to persist
 - DrumComputer crashes in pedalboard — use in DAW only
 
 ## File Locations
