@@ -60,11 +60,14 @@ plugctl load <plugin> <name>                 # Restore state from saved preset
 plugctl diff <plugin> <a> <b>                # Compare two presets (param-level)
 plugctl tweak <plugin> <name> --save-as <new> param=val ...  # Fork + modify
 plugctl export-vst3 <plugin> <name> [--all]  # Export to ~/Library/Audio/Presets/
+plugctl export-bwpreset <plugin> <name> [--all]  # Export to Bitwig library
 plugctl init <plugin>                        # Save default state as "_init"
 ```
 - Plugin names are short (`WOW2`, `Thesys`), resolved case-insensitively
 - Presets stored as `.json` (version-controlled params) + `.blob` (gitignored binary state)
 - VST3 export copies blob to `~/Library/Audio/Presets/<Vendor>/<Plugin>/` for plugin browser
+- Bitwig export wraps blob in BtWg binary format (header + meta + ZIP) → Bitwig browser
+- Export path: `~/Documents/Bitwig Studio/Library/Presets/<Plugin>/`
 - DrumComputer crashes in pedalboard — use in DAW only
 
 ## File Locations

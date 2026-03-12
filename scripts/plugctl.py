@@ -10,20 +10,27 @@ Usage:
     plugctl diff <plugin> <a> <b>                 # Compare two presets
     plugctl tweak <plugin> <name> --save-as <new> param=val ...
     plugctl export-vst3 <plugin> <name> [--all]   # Export to ~/Library/Audio/Presets/
+    plugctl export-bwpreset <plugin> <name> [--all]  # Export to Bitwig library
     plugctl init <plugin>                         # Save default state as "_init"
 """
 
 import argparse
+import hashlib
+import io
 import json
 import plistlib
 import re
+import struct
 import sys
+import uuid
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 VST3_DIR = Path("/Volumes/Macintosh HD/Library/Audio/Plug-Ins/VST3")
 PRESETS_DIR = Path(__file__).resolve().parent.parent / "presets"
 VST3_PRESETS_DIR = Path.home() / "Library" / "Audio" / "Presets"
+BITWIG_LIBRARY = Path.home() / "Documents" / "Bitwig Studio" / "Library"
 
 SKIP_PARAMS = frozenset({'aftertouch', 'pitchbend', 'midi_program_change'})
 
@@ -447,6 +454,193 @@ def cmd_export_vst3(args):
     print(f"\nExported {exported} preset(s) to {export_dir}")
 
 
+# ── Bitwig .bwpreset format ──────────────────────────────────────────────────
+
+# Plugin classification for Bitwig device_type / device_category.
+# Instruments = note_to_audio / Synth; Effects = audio_to_audio / Effect.
+EFFECT_PLUGINS = frozenset({
+    'Artillery2', 'Effectrix', 'Looperator', 'Turnado', 'WOW2',
+    'bx_greenscreamer', 'DynOne3', 'soothe2', 'ValhallaRoom',
+    'Comeback Kid', 'Decapitator',
+    'Insight 2',  # metering
+    # Ozone, RX, WaveShell are also effects
+})
+EFFECT_PREFIXES = ('Ozone', 'RX 10', 'WaveShell')
+
+
+def is_effect_plugin(plugin_name):
+    """Determine if a plugin is an audio effect (vs instrument)."""
+    if plugin_name in EFFECT_PLUGINS:
+        return True
+    return any(plugin_name.startswith(p) for p in EFFECT_PREFIXES)
+
+
+def extract_class_id(blob):
+    """Extract 32-char hex VST3 class ID from preset blob."""
+    if blob[:4] != b'VST3':
+        return None
+    return blob[8:40].decode('ascii')
+
+
+def bwpreset_meta_bytes(entries):
+    """Encode metadata key-value pairs in Bitwig binary format.
+
+    Format per entry: [u32 marker=1] [u32 key_len] [key] [u8 type] [u32 val_len] [val]
+    Type tags: 0x08=string, 0x19=bytes, 0x03=u32
+    """
+    buf = io.BytesIO()
+
+    # Section header: two u32s (4, 4) + "meta"
+    buf.write(struct.pack('>II', 4, 4))
+    buf.write(b'meta')
+
+    for key, val in entries:
+        buf.write(struct.pack('>I', 1))  # marker
+        key_bytes = key.encode('utf-8')
+        buf.write(struct.pack('>I', len(key_bytes)))
+        buf.write(key_bytes)
+
+        if isinstance(val, int):
+            buf.write(b'\x03')
+            buf.write(struct.pack('>I', val))
+        elif isinstance(val, bytes):
+            buf.write(b'\x19')
+            buf.write(struct.pack('>I', len(val)))
+            buf.write(val)
+        else:  # string
+            val_bytes = val.encode('utf-8')
+            buf.write(b'\x08')
+            buf.write(struct.pack('>I', len(val_bytes)))
+            buf.write(val_bytes)
+
+    return buf.getvalue()
+
+
+def build_bwpreset(blob, plugin_name, vendor_name, version,
+                   comment='', preset_category='', tags=''):
+    """Build a .bwpreset binary from a VST3 preset blob.
+
+    Format: BtWg ASCII header (42 bytes) + meta section + ZIP section.
+    The ZIP contains plugin-states/<uuid>.vstpreset.
+    """
+    class_id = extract_class_id(blob)
+    if not class_id:
+        raise ValueError("Blob is not a valid VST3 preset")
+
+    device_type = 'audio_to_audio' if is_effect_plugin(plugin_name) else 'note_to_audio'
+    device_category = 'Effect' if device_type == 'audio_to_audio' else 'Synth'
+    device_id = f"vst3:{class_id}:{version}"
+    preset_uuid = str(uuid.uuid4())
+    revision_id = hashlib.sha1(blob).hexdigest()
+
+    # Build meta entries (order matches Bitwig's output)
+    meta_entries = [
+        ('application_version_name', '5.2'),
+        ('branch', 'releases'),
+        ('comment', comment),
+        ('creator', ''),
+        ('device_category', device_category),
+        ('device_creator', vendor_name),
+        ('device_id', device_id),
+        ('device_name', plugin_name),
+        ('device_type', device_type),
+        ('preset_category', preset_category),
+        ('referenced_device_ids', b''),
+        ('referenced_modulator_ids', b''),
+        ('referenced_module_ids', b''),
+        ('referenced_packaged_file_ids', b''),
+        ('revision_id', revision_id),
+        ('revision_no', 0),
+        ('tags', tags),
+        ('type', 'application/bitwig-preset'),
+    ]
+
+    meta_data = bwpreset_meta_bytes(meta_entries)
+
+    # Build ZIP containing the vstpreset
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f'plugin-states/{preset_uuid}.vstpreset', blob)
+    zip_data = zip_buf.getvalue()
+
+    # Calculate offsets (from start of file)
+    header_len = 42  # "BtWg" + 38 hex chars
+    meta_offset = header_len
+    zip_offset = meta_offset + len(meta_data)
+    # Field4 = body offset (no body section, point to zip)
+    body_offset = zip_offset
+
+    # Build ASCII hex header (42 bytes: "BtWg" + 38 hex chars)
+    header = (
+        'BtWg'
+        f'0003'           # version
+        f'0002'           # type
+        f'00ba'           # field3 (constant)
+        f'{body_offset:08x}'   # field4: body offset
+        f'00000000'       # field5: zero
+        f'{zip_offset:08x}'    # field6: zip offset
+        f'00'             # field7
+    ).encode('ascii')
+
+    return header + meta_data + zip_data
+
+
+def cmd_export_bwpreset(args):
+    """Export preset(s) to Bitwig library as .bwpreset."""
+    vst3_path = resolve_plugin(args.plugin)
+    pdir = preset_dir(vst3_path)
+    plist = read_plist(vst3_path)
+
+    plugin_name = vst3_path.stem
+    vendor_name = vendor_display(plist)
+    version_parts = plist.get('CFBundleShortVersionString', '0').split()
+    version = version_parts[0] if version_parts else '0'
+
+    export_dir = BITWIG_LIBRARY / "Presets" / plugin_name
+
+    if args.all:
+        names = [jf.stem for jf in sorted(pdir.glob("*.json"))]
+    elif args.name:
+        names = [args.name]
+    else:
+        print("Error: provide a preset name or --all", file=sys.stderr)
+        sys.exit(1)
+
+    exported = 0
+    for name in names:
+        blob_path = pdir / f"{name}.blob"
+        json_path = pdir / f"{name}.json"
+        if not blob_path.exists():
+            print(f"  Skipping {name} (no blob)", file=sys.stderr)
+            continue
+
+        with open(blob_path, 'rb') as f:
+            blob = f.read()
+
+        # Read comment from JSON metadata
+        comment = ''
+        if json_path.exists():
+            with open(json_path) as f:
+                meta = json.load(f)
+            comment = meta.get('comment', '')
+
+        bwpreset = build_bwpreset(
+            blob, plugin_name, vendor_name, version,
+            comment=comment,
+        )
+
+        export_dir.mkdir(parents=True, exist_ok=True)
+        dest = export_dir / f"{name}.bwpreset"
+        with open(dest, 'wb') as f:
+            f.write(bwpreset)
+
+        print(f"  {name} → {dest}")
+        exported += 1
+
+    print(f"\nExported {exported} bwpreset(s) to {export_dir}")
+    print("Open Bitwig and check if preset appears in browser.")
+
+
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -493,6 +687,11 @@ def main():
     p.add_argument('name', nargs='?')
     p.add_argument('--all', action='store_true')
 
+    p = sub.add_parser('export-bwpreset', help='Export to Bitwig library')
+    p.add_argument('plugin')
+    p.add_argument('name', nargs='?')
+    p.add_argument('--all', action='store_true')
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -508,6 +707,7 @@ def main():
         'tweak': cmd_tweak,
         'init': cmd_init,
         'export-vst3': cmd_export_vst3,
+        'export-bwpreset': cmd_export_bwpreset,
     }
     commands[args.command](args)
 
