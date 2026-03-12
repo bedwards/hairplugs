@@ -1,0 +1,21 @@
+{
+  "name": "_init",
+  "plugin": "THE_INSTRUMENT",
+  "comment": "Default plugin state",
+  "param_count": 13,
+  "parameters": {
+    "cutoff_hz": 20000.0,
+    "drown_hz": 0.0,
+    "stab_hz": 0.0,
+    "lowcut_hz": 100.0,
+    "air_db": 0.0,
+    "output_gain_db": 0.0,
+    "pan_l": 0.0,
+    "shaper_intensity": 1.0,
+    "delay_intensity": 0.4,
+    "delay_feedback": 0.0,
+    "reverb_intensity": 0.5,
+    "reverb_size": 0.6,
+    "bypass": "False"
+  }
+}

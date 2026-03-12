@@ -1,0 +1,21 @@
+{
+  "name": "folk-indie",
+  "plugin": "THE_INSTRUMENT",
+  "comment": "Folk/indie sound. Warm cutoff, subtle air, gentle saturation/delay/reverb. Set key to Gm and use chord/melody generator in GUI. MIDI-only mode available to drive external instruments.",
+  "param_count": 13,
+  "parameters": {
+    "cutoff_hz": 12018.0,
+    "drown_hz": 0.0,
+    "stab_hz": 0.0,
+    "lowcut_hz": 80.0,
+    "air_db": 2.0,
+    "output_gain_db": 0.0,
+    "pan_l": 0.0,
+    "shaper_intensity": 0.6,
+    "delay_intensity": 0.1,
+    "delay_feedback": 0.2,
+    "reverb_intensity": 0.3,
+    "reverb_size": 0.5,
+    "bypass": "False"
+  }
+}
