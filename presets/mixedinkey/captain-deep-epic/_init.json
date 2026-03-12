@@ -1,0 +1,32 @@
+{
+  "name": "_init",
+  "plugin": "Captain Deep Epic",
+  "plugin_path": "/Volumes/Macintosh HD/Library/Audio/Plug-Ins/VST3/Captain Deep Epic.vst3",
+  "vendor": "Mixed In Key",
+  "vendor_slug": "mixedinkey",
+  "comment": "Default plugin state",
+  "param_count": 20,
+  "created": "2026-03-12T16:32:47.657781+00:00",
+  "parameters": {
+    "bypass": "False",
+    "volume": 0.575,
+    "filter_enabled": "True",
+    "filter": 0.0,
+    "delay_enabled": "True",
+    "delay_preset": "Pong",
+    "delay": 0.0,
+    "reverb_enabled": "True",
+    "reverb_preset": "Hall",
+    "reverb": 0.0,
+    "limiter_enabled": "True",
+    "sub_square": 0.7484,
+    "body": 0.7136,
+    "waveshape": 0.2092,
+    "filter_env": 0.4401,
+    "decay": 0.695,
+    "transient": 0.1781,
+    "delay_time": 0.6635,
+    "delay_amt": 0.0,
+    "mod_wheel": 0.0
+  }
+}

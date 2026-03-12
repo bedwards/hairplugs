@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""plugctl — CLI tool for VST3 preset management.
+"""plugctl — VST3 preset management CLI.
 
 Usage:
-    plugctl plugins                              # List all VST3 plugins
-    plugctl scan <plugin> [--json]               # Show all parameters + values
-    plugctl snap <plugin> <name> [--comment ""]  # Save state snapshot
-    plugctl presets <plugin>                      # List saved presets
-    plugctl load <plugin> <name>                  # Restore state from preset
-    plugctl diff <plugin> <a> <b>                 # Compare two presets
-    plugctl tweak <plugin> <name> --save-as <new> param=val ...
-    plugctl export-vst3 <plugin> <name> [--all]   # Export to ~/Library/Audio/Presets/
-    plugctl export-bwpreset <plugin> <name> [--all]  # Export to Bitwig library
-    plugctl init <plugin>                         # Save default state as "_init"
+    plugctl ls                                # List all VST3 plugins
+    plugctl ls <plugin>                       # List saved presets
+    plugctl scan <plugin> [-j|--json]         # Show params + values
+    plugctl init <plugin>                     # Save default state as _init
+    plugctl snap <plugin> <name> [-m "msg"]   # Save current state
+    plugctl load <plugin> <name>              # Restore state from preset
+    plugctl diff <plugin> <a> <b>             # Compare two presets
+    plugctl tweak <plugin> <src> <dst> p=v .. # Fork + modify params
+    plugctl export <plugin> <name|-a|--all>   # Export to plugin preset browser
 """
 
 import argparse
@@ -160,8 +159,13 @@ def flush_state(plugin):
     """Process silent audio to force plugin to update its internal preset_data.
 
     Without this, preset_data may not reflect parameter changes made via setattr.
+    Instrument plugins (no audio input) are skipped — pedalboard cannot process them.
+    For instruments, param changes via setattr may not be captured in preset_data.
     """
-    plugin.process(np.zeros((2, 512), dtype=np.float32), 44100)
+    try:
+        plugin.process(np.zeros((2, 512), dtype=np.float32), 44100)
+    except ValueError:
+        pass  # Instrument plugin — can't flush, preset_data may be stale after setattr
 
 
 def save_preset(vst3_path, plugin, name, comment=''):
@@ -200,19 +204,49 @@ def save_preset(vst3_path, plugin, name, comment=''):
 
 # ── Commands ─────────────────────────────────────────────────────────────────
 
-def cmd_plugins(args):
-    """List all VST3 plugins."""
-    plugins = get_vst3_plugins()
-    for p in plugins:
-        plist = read_plist(p)
-        vendor = vendor_display(plist)
-        version_parts = plist.get('CFBundleShortVersionString', '').split()
-        version = version_parts[0] if version_parts else ''
-        name = p.stem
-        if p.parent != VST3_DIR:
-            name = f"{p.parent.name}/{name}"
-        print(f"  {name:<40} {vendor:<25} {version}")
-    print(f"\n{len(plugins)} plugins")
+def cmd_ls(args):
+    """List plugins (no args) or presets for a plugin."""
+    if not args.plugin:
+        plugins = get_vst3_plugins()
+        for p in plugins:
+            plist = read_plist(p)
+            vendor = vendor_display(plist)
+            version_parts = plist.get('CFBundleShortVersionString', '').split()
+            version = version_parts[0] if version_parts else ''
+            name = p.stem
+            if p.parent != VST3_DIR:
+                name = f"{p.parent.name}/{name}"
+            print(f"  {name:<40} {vendor:<25} {version}")
+        print(f"\n{len(plugins)} plugins")
+        return
+
+    vst3_path = resolve_plugin(args.plugin)
+    pdir = preset_dir(vst3_path)
+
+    if not pdir.exists():
+        print(f"No presets for {vst3_path.stem}")
+        return
+
+    json_files = sorted(pdir.glob("*.json"))
+    if not json_files:
+        print(f"No presets for {vst3_path.stem}")
+        return
+
+    print(f"{vst3_path.stem} presets ({pdir.relative_to(PRESETS_DIR.parent)}):\n")
+    for jf in json_files:
+        with open(jf) as f:
+            meta = json.load(f)
+        name = meta['name']
+        comment = meta.get('comment', '')
+        created = meta.get('created', '')[:10]
+        blob_exists = (pdir / f"{name}.blob").exists()
+        status = "●" if blob_exists else "○"
+        line = f"  {status} {name:<30} {created}"
+        if comment:
+            line += f"  # {comment}"
+        print(line)
+
+    print(f"\n{len(json_files)} presets (● = blob present, ○ = json only)")
 
 
 def cmd_scan(args):
@@ -245,42 +279,13 @@ def cmd_snap(args):
     plugin = load_plugin(str(vst3_path))
 
     json_path, blob_path = save_preset(
-        vst3_path, plugin, args.name, args.comment,
+        vst3_path, plugin, args.name, args.m or '',
     )
     print(f"Saved {json_path.relative_to(PRESETS_DIR.parent)}")
     print(f"  + {blob_path.relative_to(PRESETS_DIR.parent)}"
           f" ({blob_path.stat().st_size} bytes)")
 
 
-def cmd_presets(args):
-    """List saved presets for a plugin."""
-    vst3_path = resolve_plugin(args.plugin)
-    pdir = preset_dir(vst3_path)
-
-    if not pdir.exists():
-        print(f"No presets for {vst3_path.stem}")
-        return
-
-    json_files = sorted(pdir.glob("*.json"))
-    if not json_files:
-        print(f"No presets for {vst3_path.stem}")
-        return
-
-    print(f"{vst3_path.stem} presets ({pdir.relative_to(PRESETS_DIR.parent)}):\n")
-    for jf in json_files:
-        with open(jf) as f:
-            meta = json.load(f)
-        name = meta['name']
-        comment = meta.get('comment', '')
-        created = meta.get('created', '')[:10]
-        blob_exists = (pdir / f"{name}.blob").exists()
-        status = "●" if blob_exists else "○"
-        line = f"  {status} {name:<30} {created}"
-        if comment:
-            line += f"  # {comment}"
-        print(line)
-
-    print(f"\n{len(json_files)} presets (● = blob present, ○ = json only)")
 
 
 def cmd_init(args):
@@ -391,10 +396,10 @@ def cmd_tweak(args):
 
     vst3_path = resolve_plugin(args.plugin)
     pdir = preset_dir(vst3_path)
-    blob_path = pdir / f"{args.name}.blob"
+    blob_path = pdir / f"{args.src}.blob"
 
     if not blob_path.exists():
-        print(f"Preset not found: {args.name}", file=sys.stderr)
+        print(f"Preset not found: {args.src}", file=sys.stderr)
         sys.exit(1)
 
     plugin = load_plugin(str(vst3_path))
@@ -417,16 +422,16 @@ def cmd_tweak(args):
         setattr(plugin, key, val)
         tweaks[key] = val
 
-    comment = (f"Tweaked from {args.name}: "
+    comment = (f"Tweaked from {args.src}: "
                + ', '.join(f'{k}={v}' for k, v in tweaks.items()))
-    json_path, _ = save_preset(vst3_path, plugin, args.save_as, comment)
+    save_preset(vst3_path, plugin, args.dst, comment)
 
-    print(f"Saved {args.save_as} (tweaked from {args.name})")
+    print(f"Saved {args.dst} (tweaked from {args.src})")
     for k, v in tweaks.items():
         print(f"  {k} = {v}")
 
 
-def cmd_export_vst3(args):
+def cmd_export(args):
     """Export preset(s) to ~/Library/Audio/Presets/ for plugin browser."""
     vst3_path = resolve_plugin(args.plugin)
     pdir = preset_dir(vst3_path)
@@ -768,19 +773,20 @@ def main():
     )
     sub = parser.add_subparsers(dest='command')
 
-    sub.add_parser('plugins', help='List all VST3 plugins')
+    p = sub.add_parser('ls', help='List plugins or presets')
+    p.add_argument('plugin', nargs='?')
 
-    p = sub.add_parser('scan', help='Show parameters + values')
+    p = sub.add_parser('scan', help='Show params + values')
     p.add_argument('plugin')
-    p.add_argument('--json', action='store_true')
+    p.add_argument('-j', '--json', action='store_true')
 
-    p = sub.add_parser('snap', help='Save plugin state')
+    p = sub.add_parser('init', help='Save default state as _init')
+    p.add_argument('plugin')
+
+    p = sub.add_parser('snap', help='Save current state')
     p.add_argument('plugin')
     p.add_argument('name')
-    p.add_argument('--comment', default='')
-
-    p = sub.add_parser('presets', help='List saved presets')
-    p.add_argument('plugin')
+    p.add_argument('-m', default='', help='Comment message')
 
     p = sub.add_parser('load', help='Restore state from preset')
     p.add_argument('plugin')
@@ -791,24 +797,16 @@ def main():
     p.add_argument('a')
     p.add_argument('b')
 
-    p = sub.add_parser('tweak', help='Fork + modify preset')
+    p = sub.add_parser('tweak', help='Fork + modify params')
     p.add_argument('plugin')
-    p.add_argument('name')
-    p.add_argument('--save-as', required=True)
-    p.add_argument('params', nargs='*')
+    p.add_argument('src', help='Source preset')
+    p.add_argument('dst', help='Destination preset name')
+    p.add_argument('params', nargs='*', help='param=val ...')
 
-    p = sub.add_parser('init', help='Save default state as _init')
-    p.add_argument('plugin')
-
-    p = sub.add_parser('export-vst3', help='Export to VST3 preset location')
+    p = sub.add_parser('export', help='Export to plugin preset browser')
     p.add_argument('plugin')
     p.add_argument('name', nargs='?')
-    p.add_argument('--all', action='store_true')
-
-    p = sub.add_parser('export-bwpreset', help='Export to Bitwig library')
-    p.add_argument('plugin')
-    p.add_argument('name', nargs='?')
-    p.add_argument('--all', action='store_true')
+    p.add_argument('-a', '--all', action='store_true')
 
     args = parser.parse_args()
     if not args.command:
@@ -816,16 +814,14 @@ def main():
         sys.exit(1)
 
     commands = {
-        'plugins': cmd_plugins,
+        'ls': cmd_ls,
         'scan': cmd_scan,
+        'init': cmd_init,
         'snap': cmd_snap,
-        'presets': cmd_presets,
         'load': cmd_load,
         'diff': cmd_diff,
         'tweak': cmd_tweak,
-        'init': cmd_init,
-        'export-vst3': cmd_export_vst3,
-        'export-bwpreset': cmd_export_bwpreset,
+        'export': cmd_export,
     }
     commands[args.command](args)
 

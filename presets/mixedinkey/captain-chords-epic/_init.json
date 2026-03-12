@@ -1,0 +1,24 @@
+{
+  "name": "_init",
+  "plugin": "Captain Chords Epic",
+  "plugin_path": "/Volumes/Macintosh HD/Library/Audio/Plug-Ins/VST3/Captain Chords Epic.vst3",
+  "vendor": "Mixed In Key",
+  "vendor_slug": "mixedinkey",
+  "comment": "Default plugin state",
+  "param_count": 12,
+  "created": "2026-03-12T16:32:43.632688+00:00",
+  "parameters": {
+    "bypass": "False",
+    "volume": 0.575,
+    "filter_enabled": "True",
+    "filter": 0.0,
+    "delay_enabled": "True",
+    "delay_preset": "Pong",
+    "delay": 0.1,
+    "reverb_enabled": "True",
+    "reverb_preset": "Hall",
+    "reverb": 0.1,
+    "limiter_enabled": "True",
+    "unused": 0.0
+  }
+}

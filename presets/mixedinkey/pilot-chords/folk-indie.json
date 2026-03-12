@@ -1,0 +1,20 @@
+{
+  "name": "folk-indie",
+  "plugin": "Pilot Chords",
+  "comment": "Folk/indie chord sound. Warm with subtle reverb. Set key to Gm and progression Bb-F-Gm-Eb in GUI.",
+  "param_count": 12,
+  "parameters": {
+    "bypass": "False",
+    "volume": 0.55,
+    "filter_enabled": "True",
+    "filter": 0.0,
+    "delay_enabled": "True",
+    "delay_preset": "Pong",
+    "delay": 0.0,
+    "reverb_enabled": "True",
+    "reverb_preset": "Hall",
+    "reverb": 0.2,
+    "limiter_enabled": "True",
+    "unused": 0.0
+  }
+}

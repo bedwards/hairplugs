@@ -52,22 +52,20 @@ Organized reference and CLI hacking toolkit for Brian's audio plugin collection,
 
 ## plugctl — VST3 Preset CLI
 ```
-plugctl plugins                              # List all 81 VST3 plugins
-plugctl scan <plugin> [--json]               # Show all parameters + values
-plugctl snap <plugin> <name> [--comment ""]  # Save state: JSON params + binary blob
-plugctl presets <plugin>                     # List saved presets
-plugctl load <plugin> <name>                 # Restore state from saved preset
-plugctl diff <plugin> <a> <b>                # Compare two presets (param-level)
-plugctl tweak <plugin> <name> --save-as <new> param=val ...  # Fork + modify
-plugctl export-vst3 <plugin> <name> [--all]  # Export to ~/Library/Audio/Presets/
-plugctl export-bwpreset <plugin> <name> [--all]  # Export to Bitwig library
-plugctl init <plugin>                        # Save default state as "_init"
+plugctl ls                                # List all VST3 plugins
+plugctl ls <plugin>                       # List saved presets
+plugctl scan <plugin> [-j|--json]         # Show params + values
+plugctl init <plugin>                     # Save default state as _init
+plugctl snap <plugin> <name> [-m "msg"]   # Save current state
+plugctl load <plugin> <name>              # Restore state from preset
+plugctl diff <plugin> <a> <b>             # Compare two presets
+plugctl tweak <plugin> <src> <dst> p=v .. # Fork + modify params
+plugctl export <plugin> <name|-a|--all>   # Export to plugin preset browser
 ```
+- Installed at `~/.local/bin/plugctl` (symlink to `scripts/plugctl.py`)
 - Plugin names are short (`WOW2`, `Thesys`), resolved case-insensitively
 - Presets stored as `.json` (version-controlled params) + `.blob` (gitignored binary state)
-- VST3 export copies blob to `~/Library/Audio/Presets/<Vendor>/<Plugin>/` for plugin browser
-- Bitwig export wraps blob in BtWg binary format (header + meta + ZIP) → Bitwig browser
-- Export path: `~/Documents/Bitwig Studio/Library/Presets/<Plugin>/`
+- Export copies blob to `~/Library/Audio/Presets/<Vendor>/<Plugin>/` for plugin's own preset browser
 - DrumComputer crashes in pedalboard — use in DAW only
 
 ## File Locations

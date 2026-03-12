@@ -1,0 +1,27 @@
+{
+  "name": "folk-indie",
+  "plugin": "Pilot Bass",
+  "comment": "Folk/indie bass. Warm, round, sits in the pocket. Set key to Gm in GUI.",
+  "param_count": 19,
+  "parameters": {
+    "bypass": "False",
+    "volume": 0.6,
+    "filter_enabled": "True",
+    "filter": 0.0,
+    "delay_enabled": "True",
+    "delay_preset": "Pong",
+    "delay": 0.0,
+    "reverb_enabled": "True",
+    "reverb_preset": "Hall",
+    "reverb": 0.0,
+    "limiter_enabled": "True",
+    "timbre_shift": 0.2167,
+    "envelope_depth": 0.7254,
+    "filter_decay": 0.6067,
+    "glide": 0.0,
+    "drive": 0.4833,
+    "comp_pump": 0.0067,
+    "slapback_delay": 0.0,
+    "mod_wheel": 0.0
+  }
+}

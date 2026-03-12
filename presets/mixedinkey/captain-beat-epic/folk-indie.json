@@ -1,0 +1,20 @@
+{
+  "name": "folk-indie",
+  "plugin": "Captain Beat Epic",
+  "comment": "Folk/indie drum pattern. Select folk/acoustic kit in GUI. Syncs with other Captain plugins.",
+  "param_count": 12,
+  "parameters": {
+    "bypass": "False",
+    "volume": 0.55,
+    "filter_enabled": "True",
+    "filter": 0.0,
+    "delay_enabled": "True",
+    "delay_preset": "Pong",
+    "delay": 0.0,
+    "reverb_enabled": "True",
+    "reverb_preset": "Hall",
+    "reverb": 0.0,
+    "limiter_enabled": "True",
+    "unused": 0.0
+  }
+}
