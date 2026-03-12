@@ -15,7 +15,6 @@ Usage:
 """
 
 import argparse
-import hashlib
 import io
 import json
 import plistlib
@@ -26,6 +25,8 @@ import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+import numpy as np
 
 VST3_DIR = Path("/Volumes/Macintosh HD/Library/Audio/Plug-Ins/VST3")
 PRESETS_DIR = Path(__file__).resolve().parent.parent / "presets"
@@ -155,8 +156,18 @@ def filter_params(plugin):
     return params
 
 
+def flush_state(plugin):
+    """Process silent audio to force plugin to update its internal preset_data.
+
+    Without this, preset_data may not reflect parameter changes made via setattr.
+    """
+    plugin.process(np.zeros((2, 512), dtype=np.float32), 44100)
+
+
 def save_preset(vst3_path, plugin, name, comment=''):
     """Save plugin state as JSON metadata + binary blob."""
+    flush_state(plugin)
+
     pdir = preset_dir(vst3_path)
     pdir.mkdir(parents=True, exist_ok=True)
 
@@ -513,15 +524,106 @@ def bwpreset_meta_bytes(entries):
             buf.write(struct.pack('>I', len(val_bytes)))
             buf.write(val_bytes)
 
+    # Null u32 terminator after meta entries
+    buf.write(struct.pack('>I', 0))
+
+    return buf.getvalue()
+
+
+def _bw_str(field_id, s):
+    """Encode a Bitwig body string field: [u32 field_id] [0x08] [u32 len] [data]."""
+    data = s.encode('utf-8')
+    return struct.pack('>I', field_id) + b'\x08' + struct.pack('>I', len(data)) + data
+
+
+# Structural byte constants extracted from Bitwig-generated .bwpreset files.
+# These are the fixed binary segments between variable string fields in the
+# body section (Bitwig's serialized device tree for a VST3 wrapper).
+_BW_PREAMBLE = bytes.fromhex(
+    '000005610000142305000000150a0501000014210900000728')
+_BW_AFTER_TAGS = bytes.fromhex(
+    '000000a305010000355001010000009d01020000137e0501000018f5090000075f')
+_BW_AFTER_MODULATORS = bytes.fromhex(
+    '00001a4612000000030000000000001a85090000077d'
+    '00001a7e12000000030000000000001b750a00003a3c'
+    '1200000003000017cd0a000019451200000003'
+    '00001a8c050000001a8d050000001aa905'
+    '0000000c5a09000002b400000c5b120000002a')
+_BW_AFTER_PATH = bytes.fromhex('000000000000000300000000')
+_BW_STRUCT_1 = bytes.fromhex('0000131812000000030000137a090000037c')
+_BW_STRUCT_2 = bytes.fromhex('000010ff0a000000000000137c09000004f3')
+_BW_STRUCT_3 = bytes.fromhex('000008e0120000000300000000000014fa090000024e')
+_BW_STRUCT_4 = bytes.fromhex('000008e1090000018f')
+_BW_CHAIN_PREFIX = bytes.fromhex('00002ab815')  # field_id 0x2ab8 + type 0x15
+_BW_AFTER_CHAIN_EMPTY = bytes.fromhex('000003490900000033')
+_BW_STRUCT_5 = bytes.fromhex(
+    '00000087120000000300000000000008250a0000'
+    '13810501000015051600000000000000000000000000000000')
+_BW_STRUCT_6 = bytes.fromhex(
+    '000026da01ff000026db01ff00003a330155'
+    '00000000000000000000153301020000180905000000275c0130')
+_BW_TRAILER = bytes.fromhex('0000000000001422120000000300000000')
+
+# Brian's machine identifiers (from existing Bitwig presets)
+_BW_MACHINE_NAME = 'MacBook Pro'
+_BW_MACHINE_UUID = '3bdad4c2-7603-5f27-bf85-ef8d911a9252'
+_BW_PADDING = 5000
+
+
+def _build_body(preset_name, plugin_name, vendor_name, device_category,
+                preset_category, tags, plugin_path, vstpreset_filename,
+                class_id_hex, version):
+    """Build the Bitwig device tree body section."""
+    buf = io.BytesIO()
+
+    buf.write(_BW_PREAMBLE)
+    buf.write(_bw_str(0x02b9, ''))           # container name (root)
+    buf.write(_bw_str(0x12de, preset_name))
+    buf.write(_bw_str(0x009a, plugin_name))
+    buf.write(_bw_str(0x1559, ''))           # description
+    buf.write(_bw_str(0x009b, vendor_name))
+    buf.write(_bw_str(0x009c, device_category))
+    buf.write(_bw_str(0x009e, ''))           # creator
+    buf.write(_bw_str(0x009f, ''))           # device comment
+    buf.write(_bw_str(0x00a1, preset_category))
+    buf.write(_bw_str(0x00a2, tags))
+    buf.write(_BW_AFTER_TAGS)
+    buf.write(_bw_str(0x02b9, 'MODULATORS'))
+    buf.write(_BW_AFTER_MODULATORS)
+    buf.write(_bw_str(0x0038, _BW_MACHINE_NAME))
+    buf.write(_bw_str(0x04cd, _BW_MACHINE_UUID))
+    buf.write(_bw_str(0x003a, ''))           # creator
+    buf.write(_bw_str(0x003b, plugin_path))
+    buf.write(_BW_AFTER_PATH)
+    buf.write(_bw_str(0x0be5, vstpreset_filename))
+    buf.write(_BW_STRUCT_1)
+    buf.write(_bw_str(0x02b9, ''))           # empty container
+    buf.write(_BW_STRUCT_2)
+    buf.write(_bw_str(0x02b9, 'OUTPUT_CHAINS'))
+    buf.write(_BW_STRUCT_3)
+    buf.write(_bw_str(0x02b9, 'OUT_FX'))
+    buf.write(_BW_STRUCT_4)
+    buf.write(_bw_str(0x02b9, 'Chain'))
+    buf.write(_BW_CHAIN_PREFIX + uuid.uuid4().bytes)  # unique chain UUID
+    buf.write(_bw_str(0x08df, ''))
+    buf.write(_BW_AFTER_CHAIN_EMPTY)
+    buf.write(_bw_str(0x02b9, ''))
+    buf.write(_BW_STRUCT_5)
+    buf.write(_bw_str(0x353f, ''))
+    buf.write(_BW_STRUCT_6)
+    buf.write(_bw_str(0x0ce4, class_id_hex))
+    buf.write(_bw_str(0x0c5e, version))
+    buf.write(_BW_TRAILER)
+
     return buf.getvalue()
 
 
 def build_bwpreset(blob, plugin_name, vendor_name, version,
-                   comment='', preset_category='', tags=''):
+                   preset_name='', comment='', preset_category='', tags=''):
     """Build a .bwpreset binary from a VST3 preset blob.
 
-    Format: BtWg ASCII header (42 bytes) + meta section + ZIP section.
-    The ZIP contains plugin-states/<uuid>.vstpreset.
+    Format: BtWg header (42B) + meta section + padding + body + ZIP.
+    Body = Bitwig's serialized device tree referencing the vstpreset in ZIP.
     """
     class_id = extract_class_id(blob)
     if not class_id:
@@ -531,9 +633,11 @@ def build_bwpreset(blob, plugin_name, vendor_name, version,
     device_category = 'Effect' if device_type == 'audio_to_audio' else 'Synth'
     device_id = f"vst3:{class_id}:{version}"
     preset_uuid = str(uuid.uuid4())
-    revision_id = hashlib.sha1(blob).hexdigest()
+    revision_id = uuid.uuid4().hex
+    plugin_path = f"/Library/Audio/Plug-Ins/VST3/{plugin_name}.vst3"
+    vstpreset_filename = f"{preset_uuid}.vstpreset"
 
-    # Build meta entries (order matches Bitwig's output)
+    # Meta section
     meta_entries = [
         ('application_version_name', '5.2'),
         ('branch', 'releases'),
@@ -554,35 +658,49 @@ def build_bwpreset(blob, plugin_name, vendor_name, version,
         ('tags', tags),
         ('type', 'application/bitwig-preset'),
     ]
-
     meta_data = bwpreset_meta_bytes(meta_entries)
 
-    # Build ZIP containing the vstpreset
+    # Body section (device tree)
+    body_data = _build_body(
+        preset_name=preset_name or plugin_name,
+        plugin_name=plugin_name,
+        vendor_name=vendor_name,
+        device_category=device_category,
+        preset_category=preset_category,
+        tags=tags,
+        plugin_path=plugin_path,
+        vstpreset_filename=vstpreset_filename,
+        class_id_hex=class_id,
+        version=version,
+    )
+
+    # ZIP containing the vstpreset
     zip_buf = io.BytesIO()
     with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(f'plugin-states/{preset_uuid}.vstpreset', blob)
+        zf.writestr(f'plugin-states/{vstpreset_filename}', blob)
     zip_data = zip_buf.getvalue()
 
-    # Calculate offsets (from start of file)
-    header_len = 42  # "BtWg" + 38 hex chars
-    meta_offset = header_len
-    zip_offset = meta_offset + len(meta_data)
-    # Field4 = body offset (no body section, point to zip)
-    body_offset = zip_offset
+    # Padding between meta and body (Bitwig uses ~5000 spaces)
+    padding = b' ' * _BW_PADDING
 
-    # Build ASCII hex header (42 bytes: "BtWg" + 38 hex chars)
+    # Calculate offsets
+    header_len = 42
+    body_offset = header_len + len(meta_data) + len(padding)
+    zip_offset = body_offset + len(body_data)
+
+    # ASCII hex header
     header = (
         'BtWg'
-        f'0003'           # version
-        f'0002'           # type
-        f'00ba'           # field3 (constant)
-        f'{body_offset:08x}'   # field4: body offset
-        f'00000000'       # field5: zero
-        f'{zip_offset:08x}'    # field6: zip offset
-        f'00'             # field7
+        f'0003'
+        f'0002'
+        f'00ba'
+        f'{body_offset:08x}'
+        f'00000000'
+        f'{zip_offset:08x}'
+        f'00'
     ).encode('ascii')
 
-    return header + meta_data + zip_data
+    return header + meta_data + padding + body_data + zip_data
 
 
 def cmd_export_bwpreset(args):
@@ -626,7 +744,7 @@ def cmd_export_bwpreset(args):
 
         bwpreset = build_bwpreset(
             blob, plugin_name, vendor_name, version,
-            comment=comment,
+            preset_name=name, comment=comment,
         )
 
         export_dir.mkdir(parents=True, exist_ok=True)
