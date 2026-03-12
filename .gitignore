@@ -19,3 +19,6 @@ Thumbs.db
 *.aif
 *.aiff
 *.flac
+
+# Preset blobs (binary plugin state — not version-controlled)
+presets/**/*.blob

@@ -15,7 +15,10 @@ Organized reference and CLI hacking toolkit for Brian's audio plugin collection,
 │   ├── manuals/          # PDF manuals converted to markdown (pymupdf4llm)
 │   ├── youtube/          # ytinfo JSON transcripts + markdown summaries
 │   └── genre-guides/     # Per-genre setup guides
+├── presets/              # plugctl preset storage (JSON params + binary blobs)
+│   └── <vendor>/<plugin>/  # e.g. sugar-bytes/wow2/
 ├── scripts/              # Python scripts for plugin hacking
+│   └── plugctl.py        # CLI for VST3 preset management
 └── experiments/          # Quick-start experiment setups
 ```
 
@@ -46,6 +49,23 @@ Organized reference and CLI hacking toolkit for Brian's audio plugin collection,
 - Sugar Bytes presets are binary format (.sbd, .sbcy, .sbb, .sbep, .wow) in ~/Documents/Sugar Bytes/
 - Kontakt library database: ~/Library/Application Support/Native Instruments/Kontakt 8/komplete.db3
 - Most Sugar Bytes plugins have standalone apps at /Volumes/Macintosh HD/Applications/Sugar Bytes/
+
+## plugctl — VST3 Preset CLI
+```
+plugctl plugins                              # List all 81 VST3 plugins
+plugctl scan <plugin> [--json]               # Show all parameters + values
+plugctl snap <plugin> <name> [--comment ""]  # Save state: JSON params + binary blob
+plugctl presets <plugin>                     # List saved presets
+plugctl load <plugin> <name>                 # Restore state from saved preset
+plugctl diff <plugin> <a> <b>                # Compare two presets (param-level)
+plugctl tweak <plugin> <name> --save-as <new> param=val ...  # Fork + modify
+plugctl export-vst3 <plugin> <name> [--all]  # Export to ~/Library/Audio/Presets/
+plugctl init <plugin>                        # Save default state as "_init"
+```
+- Plugin names are short (`WOW2`, `Thesys`), resolved case-insensitively
+- Presets stored as `.json` (version-controlled params) + `.blob` (gitignored binary state)
+- VST3 export copies blob to `~/Library/Audio/Presets/<Vendor>/<Plugin>/` for plugin browser
+- DrumComputer crashes in pedalboard — use in DAW only
 
 ## File Locations
 - AU Components: /Volumes/Macintosh HD/Library/Audio/Plug-Ins/Components/
