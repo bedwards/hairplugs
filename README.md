@@ -28,10 +28,7 @@ Audio plugin knowledge base, hacking toolkit, and quick-start experiment library
 | DecentSampler | Decent Samples | Yes | 1 param | Free sampler |
 | M-Tron Pro IV | GForce | Yes | 116 params | Mellotron emulation |
 | Surge XT | Surge Synth Team | Yes | 775 params | Open-source hybrid synthesizer |
-| Synplant | Sonic Charge | No | TBD | Genetic synthesizer |
-| Microtonic | Sonic Charge | No | TBD | Drum synthesizer |
 | Synthesizer V Studio 2 | Dreamtonics | Yes | TBD | AI vocal synthesizer |
-| Bitspeek | Sonic Charge | No | TBD | Vocal effect / vocoder |
 
 ### Note Generators (Nothing → MIDI)
 | Plugin | Maker | Description |
@@ -73,7 +70,6 @@ Audio plugin knowledge base, hacking toolkit, and quick-start experiment library
 |--------|-------|-----------|------------|-------------|
 | Comeback Kid | Baby Audio | No | 23 params | Character delay |
 | Valhalla Room | Valhalla DSP | No | 23 params | Algorithmic reverb |
-| Permut8 | Sonic Charge | No | TBD | Granular / glitch effect |
 
 ### Master Chain
 | Plugin | Maker | Description |

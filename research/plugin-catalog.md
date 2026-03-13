@@ -26,13 +26,7 @@ All installed plugins (excluding Sugar Bytes) categorized and documented.
       "standalone": true,
       "description": "Sampled virtual banjo instrument based on a Deering Sierra banjo with 9 articulations and 3.9 GB sample library."
     },
-    {
-      "name": "Bitspeek",
-      "developer": "Sonic Charge",
-      "standalone": false,
-      "description": "Real-time pitch-excited linear prediction codec effect that resynthesizes audio through a simple oscillator/noise/filter architecture; responds to MIDI for pitched playback."
-    },
-    {
+{
       "name": "DecentSampler",
       "developer": "Decent Samples",
       "standalone": true,
@@ -62,13 +56,7 @@ All installed plugins (excluding Sugar Bytes) categorized and documented.
       "standalone": true,
       "description": "Mellotron M400 emulation with 3.5 GB library, 200+ tape banks, 800+ presets, amp sim, and polyphonic aftertouch."
     },
-    {
-      "name": "Microtonic",
-      "developer": "Sonic Charge",
-      "standalone": false,
-      "description": "100% synthetic drum and percussion synthesizer with 8 channels and built-in pattern-based drum machine engine; very low CPU."
-    },
-    {
+{
       "name": "Play (Native Instruments)",
       "developer": "Native Instruments",
       "standalone": false,
@@ -80,13 +68,7 @@ All installed plugins (excluding Sugar Bytes) categorized and documented.
       "standalone": true,
       "description": "Free open-source hybrid synthesizer with 12 oscillator algorithms, extensive modulation, MPE/microtuning support, and built-in effects."
     },
-    {
-      "name": "Synplant",
-      "developer": "Sonic Charge",
-      "standalone": false,
-      "description": "Genetic/organic synthesizer where sounds evolve like plants; Synplant 2 adds Genopatch machine-learning patch creation from audio samples."
-    },
-    {
+{
       "name": "Synthesizer V Studio 2 Pro",
       "developer": "Dreamtonics",
       "standalone": true,
@@ -235,13 +217,7 @@ All installed plugins (excluding Sugar Bytes) categorized and documented.
       "standalone": false,
       "description": "Analog-flavored character delay with intuitive controls for a wide range of delay sounds from subtle to extreme."
     },
-    {
-      "name": "Permut8",
-      "developer": "Sonic Charge",
-      "standalone": false,
-      "description": "12-bit digital delay with variable sample rate and programmable processor; produces glitch, bitcrushed, circuit-bent, and flanged effects."
-    },
-    {
+{
       "name": "Valhalla Room",
       "developer": "Valhalla DSP",
       "standalone": false,
@@ -368,7 +344,6 @@ All installed plugins (excluding Sugar Bytes) categorized and documented.
 
 ## Notes
 
-- **Bitspeek** is categorized as `instruments` because while it processes audio input, its primary creative use is resynthesizing audio through MIDI-controllable oscillators, effectively turning it into a playable instrument.
 - **Captain Beat** is categorized as `note-generators` rather than `instruments` because its primary output is MIDI drum patterns (exportable as MIDI), even though it includes built-in drum sounds for preview.
 - **Captain Play** and the **Pilot** series are categorized as `note-generators` because they generate MIDI note output for other instruments to play.
 - **DynOne3** is categorized as `audio-fx-tone` rather than `master-chain` because despite mastering use cases, its primary function is multiband compression (a dynamics/tone-shaping tool).

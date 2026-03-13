@@ -90,11 +90,3 @@ Free, open-source sampler that loads .dspreset files. Community library of free 
 AI-powered vocal synthesizer. Creates realistic singing voices from MIDI + lyrics.
 - **Standalone**: Yes
 - **Best for**: Vocal harmonies, choir parts, vocal experimentation
-
-### Microtonic (Sonic Charge)
-Drum synthesizer using analog modeling. 8 channels with pattern sequencer.
-- **Best for**: Electronic drums, experimental percussion
-
-### Synplant (Sonic Charge)
-Genetic synthesizer where you "grow" sounds by planting seeds and mutating.
-- **Best for**: Unique, unpredictable sounds, experimental textures

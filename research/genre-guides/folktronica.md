@@ -35,7 +35,7 @@ Pilot Melody → Thesys (transform notes) → Obscurium (spectral synth) → Tur
 
 ### Banjo Meets Electronics
 ```
-Kontakt (RealiBanjo) → Permut8 (granular glitch, subtle) → WOW2 → Comeback Kid
+Kontakt (RealiBanjo) → WOW2 → Comeback Kid
 ```
 
 ### Full Folktronica Template

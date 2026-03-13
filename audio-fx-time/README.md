@@ -12,10 +12,6 @@ Algorithmic reverb. Clean, versatile, and CPU-efficient. Multiple room algorithm
 - **Pedalboard**: 23 params (mix, predelay, decay, hicut, earlylatemix, latesize, latecross, latemodrate, latemoddepth, rtbassmultiply...)
 - **Best for**: Everything — room verb for acoustic instruments, large halls for ambient, tight rooms for drums
 
-## Permut8 (Sonic Charge)
-Granular/glitch delay effect. Takes audio and rearranges it in unpredictable ways. Part delay, part granular, part chaos.
-- **Best for**: Experimental textures, glitch effects, folktronica weirdness
-
 ## Chain Position
 
 ```

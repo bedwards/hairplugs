@@ -17,7 +17,7 @@ Kontakt (Scarbee Rickenbacker Bass) → Turnado (subtle, dictator 1 = compressio
 
 ### Drum Track
 ```
-Captain Beat → DrumComputer (or Microtonic) → DynOne3 → Valhalla Room (send, tight room)
+Captain Beat → DrumComputer → DynOne3 → Valhalla Room (send, tight room)
 ```
 Or:
 ```

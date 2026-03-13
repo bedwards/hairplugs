@@ -57,6 +57,6 @@ Turnado's 8 dictator knobs make this controllable chaos.
 ### Granular from Acoustic
 Record acoustic guitar, then:
 ```
-[Recorded Audio] → Egoist (extreme slice) → Permut8 (granular) → Valhalla Room
+[Recorded Audio] → Egoist (extreme slice) → Valhalla Room
 ```
 Turns folk recordings into electronic textures.
